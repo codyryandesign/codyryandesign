@@ -1,0 +1,112 @@
+//SOLARIS Scheduled Percent-On Demo by @CODYRYANDESIGN
+
+//This example demonstrates one way to use the built-in functions for monitoring time
+//to cause gradual time-based changes in your light show
+export var _hour
+export var _minute
+export var _second
+//a decimal representation of the current time
+export var currentTime
+//scheduled start time
+export var bTime
+//scheduled end time
+export var eTime
+//use this slider to set the start time for the program
+export function sliderBeginTime(begin) {
+  bTime = floor(24*begin)
+}
+//use this slider to set the end time for the program
+export function sliderEndTime(end) {
+  eTime = floor(24*end)
+}
+
+//how long the program will be on
+export var numHoursOn
+//how long the program will be off
+export var numHoursOff
+
+//the calculated 'on' percentage based off the current position in the schedule
+export var percentOn
+
+function calcPercentOn(hr, min, sec, beginTime, numHrsOn) {
+  //each minute contributes 1/60th of an hour
+  minFraction = min/60
+  //each second contributes 1/3600th of an hour
+  secFraction = sec/3600
+  //add additional time from current minute and second
+  currentTime = hr + minFraction + secFraction
+
+  //calculate the 'percentage on' based on the current time in the schedule
+  pOn = (currentTime - beginTime) / numHrsOn
+
+  return pOn
+}
+
+//rotational speed of the effect
+export var speed
+
+export var h
+export var s
+export var v
+// export function sliderHue(hue) {
+//   h = hue
+// }
+
+export var test = .9
+export function sliderTest(test) {
+  t = triangle(test*100)
+}
+
+function InputMap(input, in_min, in_max, out_min, out_max)
+{
+return (input - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+PI10 = PI2*5
+PI6 = PI2*3
+
+export function beforeRender(delta) {
+  //grab current hour
+  _hour = clockHour()
+  //grab current minute
+  _minute = clockMinute()
+  //grab current second
+  _second = clockSecond()
+
+  numHoursOn = eTime - bTime
+  if(numHoursOn < 0) {
+    numHoursOn = 24 + numHoursOn
+  }
+  numHoursOff = 24 - numHoursOn
+  //If within the scheduled on time
+  if(_hour >= bTime && _hour < eTime) {
+    //plug all time info into the function to calculate 'percentage on'
+    percentOn = calcPercentOn(_hour, _minute, _second, bTime, numHoursOn)
+    //if we are outside the scheduled time of operation, set percentOn to 0
+  } else {
+    percentOn = 0
+  }
+
+  t1 = time(.3)*PI10
+  t2 = time(.05)*PI2
+  t3 = time(.04)*PI2
+
+}
+
+export function render(index) {
+  //triangle-map percentOn to a new variable
+  trianglePercentOn = triangle(percentOn)
+  h = InputMap(trianglePercentOn, 0.0, 1.0, -0.001, 0.1)
+  triMap = InputMap(trianglePercentOn, 0.0, 1.0, 10, 12)
+  //manipulate speed based on a triangle-mapping from percentOn
+  speed = percentOn <= .5 ? triMap : -1 * triMap
+
+
+  s = 2.0 - trianglePercentOn   - sin(index*PI10/pixelCount*speed + t1)
+  s = s*s*s
+  b = sin(index*PI6/pixelCount - t2)
+  c = triangle((index*3/pixelCount + 1 + sin(t3))/2 % 1)
+  v = (s+b+c)/6
+  v = v*v
+  hsv(h - random(.01), s, v*trianglePercentOn)
+}
